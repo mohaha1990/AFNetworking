@@ -1250,25 +1250,34 @@ typedef enum {
     }];
 
     if (parameters) {
-        if (![mutableRequest valueForHTTPHeaderField:@"Content-Type"]) {
-            [mutableRequest setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
-        }
-
-        if (![NSJSONSerialization isValidJSONObject:parameters]) {
-            if (error) {
-                NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedStringFromTable(@"The `parameters` argument is not valid JSON.", @"AFNetworking", nil)};
-                *error = [[NSError alloc] initWithDomain:AFURLRequestSerializationErrorDomain code:NSURLErrorCannotDecodeContentData userInfo:userInfo];
+        
+        if([parameters isKindOfClass:[NSData class]]) {
+            
+            [mutableRequest setHTTPBody:parameters];
+            
+        } else {
+            
+            if (![mutableRequest valueForHTTPHeaderField:@"Content-Type"]) {
+                [mutableRequest setValue:@"application/json" forHTTPHeaderField:@"Content-Type"];
             }
-            return nil;
+            
+            if (![NSJSONSerialization isValidJSONObject:parameters]) {
+                if (error) {
+                    NSDictionary *userInfo = @{NSLocalizedFailureReasonErrorKey: NSLocalizedStringFromTable(@"The `parameters` argument is not valid JSON.", @"AFNetworking", nil)};
+                    *error = [[NSError alloc] initWithDomain:AFURLRequestSerializationErrorDomain code:NSURLErrorCannotDecodeContentData userInfo:userInfo];
+                }
+                return nil;
+            }
+            
+            NSData *jsonData = [NSJSONSerialization dataWithJSONObject:parameters options:self.writingOptions error:error];
+            
+            if (!jsonData) {
+                return nil;
+            }
+            
+            [mutableRequest setHTTPBody:jsonData];
         }
-
-        NSData *jsonData = [NSJSONSerialization dataWithJSONObject:parameters options:self.writingOptions error:error];
         
-        if (!jsonData) {
-            return nil;
-        }
-        
-        [mutableRequest setHTTPBody:jsonData];
     }
 
     return mutableRequest;
